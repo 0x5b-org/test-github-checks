@@ -44,19 +44,19 @@ const matrix = _.product(statuses, conclusions) as [typeof statuses[number], typ
 
 const { data: main } = await tokentokit.rest.git.getRef({
   owner: '0x5b-org',
-  repo: 'repository-config-testbed',
+  repo: 'test-github-checks',
   ref: 'heads/main'
 });
 
 const rulesets = await tokentokit.paginate(tokentokit.rest.repos.getRepoRulesets, {
   owner: '0x5b-org',
-  repo: 'repository-config-testbed',
+  repo: 'test-github-checks',
   includes_parents: false
 });
 
 const branches = await tokentokit.paginate(tokentokit.rest.repos.listBranches, {
   owner: '0x5b-org',
-  repo: 'repository-config-testbed'
+  repo: 'test-github-checks'
 });
 
 let featureBranchSha: string;
@@ -65,13 +65,13 @@ let featureBranchSha: string;
 beforeAll(async () => {
   const { data: mainTree } = await tokentokit.rest.git.getTree({
     owner: '0x5b-org',
-    repo: 'repository-config-testbed',
+    repo: 'test-github-checks',
     tree_sha: main.object.sha
   });
 
   const { data: tree } = await tokentokit.rest.git.createTree({
     owner: '0x5b-org',
-    repo: 'repository-config-testbed',
+    repo: 'test-github-checks',
     base_tree: mainTree.sha,
     tree: [
       {
@@ -84,7 +84,7 @@ beforeAll(async () => {
 
   const { data: commit } = await tokentokit.rest.git.createCommit({
     owner: '0x5b-org',
-    repo: 'repository-config-testbed',
+    repo: 'test-github-checks',
     message: 'Create feature branch',
     tree: tree.sha,
     parents: [main.object.sha]
@@ -93,7 +93,7 @@ beforeAll(async () => {
   if (branches.find(branch => branch.name === 'checks/feature')) {
     await tokentokit.rest.git.updateRef({
       owner: '0x5b-org',
-      repo: 'repository-config-testbed',
+      repo: 'test-github-checks',
       ref: 'heads/checks/feature',
       sha: commit.sha,
       force: true
@@ -101,7 +101,7 @@ beforeAll(async () => {
   } else {
     await tokentokit.rest.git.createRef({
       owner: '0x5b-org',
-      repo: 'repository-config-testbed',
+      repo: 'test-github-checks',
       ref: 'refs/heads/checks/feature',
       sha: commit.sha
     });
@@ -118,7 +118,7 @@ describe.concurrent.for(matrix)('Check %s, %s', async ([status, conclusion]) => 
     if (branch) {
       await apptokit.rest.git.deleteRef({
         owner: '0x5b-org',
-        repo: 'repository-config-testbed',
+        repo: 'test-github-checks',
         ref: `heads/${branch.name}`
       });
     }
@@ -132,7 +132,7 @@ describe.concurrent.for(matrix)('Check %s, %s', async ([status, conclusion]) => 
     // Upsert ruleset
     const ruleset = {
       owner: '0x5b-org',
-      repo: 'repository-config-testbed',
+      repo: 'test-github-checks',
       name: `Checks ${status} ${conclusion}`,
       target: 'branch',
       enforcement: 'active',
@@ -166,7 +166,7 @@ describe.concurrent.for(matrix)('Check %s, %s', async ([status, conclusion]) => 
     // Create branch
     await tokentokit.rest.git.createRef({
       owner: '0x5b-org',
-      repo: 'repository-config-testbed',
+      repo: 'test-github-checks',
       ref: `refs/heads/checks/${status}/${conclusion}/main`,
       sha: main.object.sha
     });
@@ -174,7 +174,7 @@ describe.concurrent.for(matrix)('Check %s, %s', async ([status, conclusion]) => 
     // Create check on feature branch
     await apptokit.rest.checks.create({
       owner: '0x5b-org',
-      repo: 'repository-config-testbed',
+      repo: 'test-github-checks',
       head_sha: featureBranchSha,
       name: `${status}/${conclusion}`,
       status,
@@ -188,7 +188,7 @@ describe.concurrent.for(matrix)('Check %s, %s', async ([status, conclusion]) => 
     try {
       await tokentokit.rest.git.updateRef({
         owner: '0x5b-org',
-        repo: 'repository-config-testbed',
+        repo: 'test-github-checks',
         ref: `heads/checks/${status}/${conclusion}/main`,
         sha: featureBranchSha,
         force: true
